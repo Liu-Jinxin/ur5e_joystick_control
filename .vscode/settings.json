@@ -1,0 +1,14 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/jinxin/ros2_ws/install/ur5e_joystick_control/lib/python3.10/site-packages",
+        "/home/jinxin/ros2_ws/install/realsense2_camera_msgs/local/lib/python3.10/dist-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/jinxin/ros2_ws/install/ur5e_joystick_control/lib/python3.10/site-packages",
+        "/home/jinxin/ros2_ws/install/realsense2_camera_msgs/local/lib/python3.10/dist-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ]
+}
