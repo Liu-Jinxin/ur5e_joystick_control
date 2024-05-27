@@ -22,65 +22,78 @@ class UR5eInverseKinematics(Node):
         joint_order = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
         joint_positions = dict(zip(msg.name, msg.position))
         self.joint_angles = [joint_positions[joint] for joint in joint_order]
-        self.joint_angles_received = True  # Set the flag to True once joint angles are received
+        self.joint_angles_received = True
 
     def joystick_callback(self, msg):
         if not self.joint_angles_received:
             self.get_logger().info('Joint angles not received yet, skipping inverse kinematics calculation.')
             return
-        
-        x_velocity = msg.axes[0]        # X velocity
-        y_velocity = msg.axes[1]        # Y velocity
-        z_velocity = msg.axes[2]        # Z velocity
-        roll_velocity = msg.axes[3]     # Roll velocity
-        pitch_velocity = 0.0            # Pitch velocity
-        yaw_velocity = 0.0              # Yaw velocity
 
-        if msg.buttons[4] == 1:
-            pitch_velocity = msg.axes[0]
-            yaw_velocity = msg.axes[1]
-            x_velocity = 0
-            y_velocity = 0
-        elif msg.buttons[5] == 1:
-            pitch_velocity = msg.axes[2]
-            yaw_velocity = msg.axes[3]
-            z_velocity = 0
-            roll_velocity = 0
+        x_velocity = msg.axes[0]
+        y_velocity = -msg.axes[1]
+        z_velocity = msg.axes[3]
+        roll_velocity = msg.axes[2]
+        pitch_velocity = msg.axes[4]
+        yaw_velocity = msg.axes[5]
 
-        # Adding logging to debug the input velocities
-        self.get_logger().info(f'Velocities - X: {x_velocity}, Y: {y_velocity}, Z: {z_velocity}, Roll: {roll_velocity}, Pitch: {pitch_velocity}, Yaw: {yaw_velocity}')
-
-        end_effector_velocity = np.array([0.1 * x_velocity, 0.1 * y_velocity, 0.1 * z_velocity, roll_velocity, pitch_velocity, yaw_velocity])
-        joint_velocities = self.inverse_kinematics(self.joint_angles, end_effector_velocity)
+        # Base to end-effector velocity transformation
+        eef_base_velocity = np.array([0.1 * x_velocity, 0.1 * y_velocity, 0.1 * z_velocity, roll_velocity, pitch_velocity, yaw_velocity])
+        self.get_logger().info(f'End-effector velocity: {eef_base_velocity}')
+        joint_velocities = self.inverse_kinematics(self.joint_angles, eef_base_velocity)
         self.publish_joint_velocities(joint_velocities)
 
     def compute_jacobian(self, theta):
-        jacobian = np.zeros((6, 6))
-        t = np.eye(4)
-        z = np.array([0, 0, 1])
-        p = np.zeros(3)
+        J = np.zeros((6, 6))  # Jacobian matrix
+        T = np.eye(4)  # Transformation matrix from the base to the current joint
+
+        # Lists to store z axes and origin points for each joint
+        z_vectors = []
+        p_vectors = []
+
+        # Start with the base z-axis, which is [0, 0, 1] for the initial configuration
+        z_base = np.array([0, 0, 1])  # This is z0
+        p_base = np.array([0, 0, 0])  # This is p0
+
+        # Initial base z-axis and origin point
+        z_vectors.append(z_base)
+        p_vectors.append(p_base)
 
         for i in range(6):
-            ti = np.array([
-                [np.cos(theta[i]), -np.sin(theta[i]) * np.cos(self.dh_alpha[i]), np.sin(theta[i]) * np.sin(self.dh_alpha[i]), self.dh_a[i] * np.cos(theta[i])],
-                [np.sin(theta[i]), np.cos(theta[i]) * np.cos(self.dh_alpha[i]), -np.cos(theta[i]) * np.sin(self.dh_alpha[i]), self.dh_a[i] * np.sin(theta[i])],
-                [0, np.sin(self.dh_alpha[i]), np.cos(self.dh_alpha[i]), self.dh_d[i]],
+            alpha = self.dh_alpha[i]  # Twist angle
+            a = self.dh_a[i]          # Link length
+            d = self.dh_d[i]          # Link offset
+
+            # Compute transformation matrix for joint i
+            Ti = np.array([
+                [np.cos(theta[i]), -np.sin(theta[i]) * np.cos(alpha), np.sin(theta[i]) * np.sin(alpha), a * np.cos(theta[i])],
+                [np.sin(theta[i]), np.cos(theta[i]) * np.cos(alpha), -np.cos(theta[i]) * np.sin(alpha), a * np.sin(theta[i])],
+                [0, np.sin(alpha), np.cos(alpha), d],
                 [0, 0, 0, 1]
             ])
-            t = np.dot(t, ti)
-            r = t[:3, :3]
-            new_p = t[:3, 3]
-            jacobian[:3, i] = np.cross(z, (new_p - p))
-            jacobian[3:, i] = z
-            z = r @ np.array([0, 0, 1])
-            p = new_p
 
-        return jacobian
+            # Update transformation matrix from base to current joint
+            T = np.dot(T, Ti)
+            
+            # Update and store z axis and origin point for the current joint
+            z_vectors.append(T[:3, 2])
+            p_vectors.append(T[:3, 3])
+
+        p_end = p_vectors[-1]  # Position of the end effector
+
+        for i in range(6):
+            # Compute columns of the Jacobian matrix
+            J[:3, i] = np.cross(z_vectors[i], p_end - p_vectors[i])  # Linear velocity component
+            J[3:, i] = z_vectors[i]  # Angular velocity component
+
+        return J
+
+
+
 
     def inverse_kinematics(self, theta, end_effector_velocity):
-        jacobian = self.compute_jacobian(theta)
-        jacobian_inv = np.linalg.pinv(jacobian)
-        joint_velocities = np.dot(jacobian_inv, end_effector_velocity)
+        J = self.compute_jacobian(theta)
+        J_pinv = np.linalg.pinv(J)  # Pseudoinverse of Jacobian
+        joint_velocities = np.dot(J_pinv, end_effector_velocity)
         return joint_velocities
 
     def publish_joint_velocities(self, joint_velocities):
