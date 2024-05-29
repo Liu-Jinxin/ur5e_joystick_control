@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy, JointState
 from std_msgs.msg import Float64MultiArray
+from ur5e_joystick_control.RobotiqGripper import RobotiqHand
 import numpy as np
 
 class UR5eInverseKinematics(Node):
@@ -10,6 +11,13 @@ class UR5eInverseKinematics(Node):
         super().__init__('ur5e_inverse_kinematics')
         self.subscription_joy = self.create_subscription(Joy, '/joy', self.joystick_callback, 10)
         self.subscription_joint_states = self.create_subscription(JointState, '/joint_states', self.joint_states_callback, 10)
+        self.gripper = RobotiqHand()
+        self.gripper.connect("192.168.0.121", 54321)
+        self.gripper.reset()
+        self.gripper.activate()
+        self.gripper.wait_activate_complete()
+        self.gripper_position = 0
+
         self.publisher = self.create_publisher(Float64MultiArray, '/forward_velocity_controller/commands', 1)
 
         self.dh_d = [0.1625, 0, 0, 0.1333, 0.0997, 0.0996]
@@ -35,6 +43,20 @@ class UR5eInverseKinematics(Node):
         roll_velocity = msg.axes[2]
         pitch_velocity = msg.axes[4]
         yaw_velocity = msg.axes[5]
+
+        if msg.buttons[5] == 1:
+            self.get_logger().info('Opening gripper')
+            self.gripper_position += 10
+            if self.gripper_position > 255:
+                self.gripper_position = 255
+            self.gripper.move(self.gripper_position, 0, 100)
+        
+        if msg.buttons[7] == 1:
+            self.get_logger().info('Closing gripper')
+            self.gripper_position -= 10
+            if self.gripper_position < 0:
+                self.gripper_position = 0
+            self.gripper.move(self.gripper_position, 0, 100)
 
         # Base to end-effector velocity transformation
         eef_base_velocity = np.array([0.1 * x_velocity, 0.1 * y_velocity, 0.1 * z_velocity, roll_velocity, pitch_velocity, yaw_velocity])
