@@ -39,19 +39,19 @@ class UR5eInverseKinematics(Node):
 
         x_velocity = msg.axes[0]
         y_velocity = -msg.axes[1]
-        z_velocity = msg.axes[3]
-        roll_velocity = msg.axes[2]
-        pitch_velocity = msg.axes[4]
-        yaw_velocity = msg.axes[5]
+        z_velocity = msg.axes[4]
+        roll_velocity = msg.axes[3]
+        pitch_velocity = msg.axes[6]
+        yaw_velocity = msg.axes[7]
 
-        if msg.buttons[5] == 1:
+        if msg.buttons[4] == 1:
             self.get_logger().info('Opening gripper')
             self.gripper_position += 10
             if self.gripper_position > 255:
                 self.gripper_position = 255
             self.gripper.move(self.gripper_position, 0, 100)
         
-        if msg.buttons[7] == 1:
+        if msg.buttons[5] == 1:
             self.get_logger().info('Closing gripper')
             self.gripper_position -= 10
             if self.gripper_position < 0:
@@ -59,7 +59,7 @@ class UR5eInverseKinematics(Node):
             self.gripper.move(self.gripper_position, 0, 100)
 
         # Base to end-effector velocity transformation
-        eef_base_velocity = np.array([0.1 * x_velocity, 0.1 * y_velocity, 0.1 * z_velocity, roll_velocity, pitch_velocity, yaw_velocity])
+        eef_base_velocity = np.array([0.05 * x_velocity, 0.05 * y_velocity, 0.05 * z_velocity, 0.05 * roll_velocity, 0.05 * pitch_velocity, 0.05 * yaw_velocity])
         self.get_logger().info(f'End-effector velocity: {eef_base_velocity}')
         joint_velocities = self.inverse_kinematics(self.joint_angles, eef_base_velocity)
         self.publish_joint_velocities(joint_velocities)
