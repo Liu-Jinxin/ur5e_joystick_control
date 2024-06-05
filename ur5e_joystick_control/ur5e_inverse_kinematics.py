@@ -109,9 +109,6 @@ class UR5eInverseKinematics(Node):
 
         return J
 
-
-
-
     def inverse_kinematics(self, theta, end_effector_velocity):
         J = self.compute_jacobian(theta)
         J_pinv = np.linalg.pinv(J)  # Pseudoinverse of Jacobian
