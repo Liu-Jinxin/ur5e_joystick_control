@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
+import rospy
 from sensor_msgs.msg import Joy, JointState
 from std_msgs.msg import Float64MultiArray
-from ur5e_joystick_control.RobotiqGripper import RobotiqHand
+from RobotiqGripper import RobotiqHand
 import numpy as np
 
-class UR5eInverseKinematics(Node):
+class UR5eInverseKinematics:
     def __init__(self):
-        super().__init__('ur5e_inverse_kinematics')
-        self.subscription_joy = self.create_subscription(Joy, '/joy', self.joystick_callback, 10)
-        self.subscription_joint_states = self.create_subscription(JointState, '/joint_states', self.joint_states_callback, 10)
-        self.gripper = RobotiqHand()
-        self.gripper.connect("192.168.0.121", 54321)
-        self.gripper.reset()
-        self.gripper.activate()
-        self.gripper.wait_activate_complete()
-        self.gripper_position = 0
+        rospy.init_node('ur5e_inverse_kinematics', anonymous=True)
 
-        self.publisher = self.create_publisher(Float64MultiArray, '/forward_velocity_controller/commands', 1)
+        # self.gripper = RobotiqHand()
+        # self.gripper.connect("192.168.0.121", 54321)
+        # self.gripper.reset()
+        # self.gripper.activate()
+        # self.gripper.wait_activate_complete()
+        # self.gripper_position = 0
 
         self.dh_d = [0.1625, 0, 0, 0.1333, 0.0997, 0.0996]
         self.dh_a = [0, -0.425, -0.3922, 0, 0, 0]
         self.dh_alpha = [np.pi/2, 0, 0, np.pi/2, -np.pi/2, 0]
         self.joint_angles = [0, 0, 0, 0, 0, 0]  # Initial joint angles
+
         self.joint_angles_received = False  # Flag to check if joint angles are received
+        self.subscription_joy = rospy.Subscriber('/joy', Joy, self.joystick_callback)
+        self.subscription_joint_states = rospy.Subscriber('/joint_states', JointState, self.joint_states_callback)
+        self.publisher = rospy.Publisher('/joint_group_vel_controller/command', Float64MultiArray, queue_size=1)
+        
 
     def joint_states_callback(self, msg):
         joint_order = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
@@ -34,7 +35,7 @@ class UR5eInverseKinematics(Node):
 
     def joystick_callback(self, msg):
         if not self.joint_angles_received:
-            self.get_logger().info('Joint angles not received yet, skipping inverse kinematics calculation.')
+            rospy.loginfo('Joint angles not received yet, skipping inverse kinematics calculation.')
             return
 
         x_velocity = msg.axes[0]
@@ -45,14 +46,14 @@ class UR5eInverseKinematics(Node):
         yaw_velocity = msg.axes[7]
 
         if msg.buttons[4] == 1:
-            self.get_logger().info('Opening gripper')
+            rospy.loginfo('Opening gripper')
             self.gripper_position += 10
             if self.gripper_position > 255:
                 self.gripper_position = 255
             self.gripper.move(self.gripper_position, 0, 100)
         
         if msg.buttons[5] == 1:
-            self.get_logger().info('Closing gripper')
+            rospy.loginfo('Closing gripper')
             self.gripper_position -= 10
             if self.gripper_position < 0:
                 self.gripper_position = 0
@@ -60,7 +61,7 @@ class UR5eInverseKinematics(Node):
 
         # Base to end-effector velocity transformation
         eef_base_velocity = np.array([0.05 * x_velocity, 0.05 * y_velocity, 0.05 * z_velocity, 0.05 * roll_velocity, 0.05 * pitch_velocity, 0.05 * yaw_velocity])
-        self.get_logger().info(f'End-effector velocity: {eef_base_velocity}')
+        rospy.loginfo('End-effector velocity: {}'.format(eef_base_velocity))
         joint_velocities = self.inverse_kinematics(self.joint_angles, eef_base_velocity)
         self.publish_joint_velocities(joint_velocities)
 
@@ -119,13 +120,14 @@ class UR5eInverseKinematics(Node):
         msg = Float64MultiArray()
         msg.data = joint_velocities.tolist()
         self.publisher.publish(msg)
+        return
 
-def main(args=None):
-    rclpy.init(args=args)
-    ur5e_inverse_kinematics = UR5eInverseKinematics()
-    rclpy.spin(ur5e_inverse_kinematics)
-    ur5e_inverse_kinematics.destroy_node()
-    rclpy.shutdown()
+def main():
+    try:
+        ur5e_inverse_kinematics = UR5eInverseKinematics()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
 
 if __name__ == '__main__':
     main()

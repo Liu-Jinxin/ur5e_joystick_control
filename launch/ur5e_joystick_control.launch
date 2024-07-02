@@ -1,0 +1,13 @@
+<launch>
+    <!-- Joy Node for joystick input -->
+    <node name="joy_node" pkg="joy" type="joy_node" output="screen">
+        <!-- Optional parameters -->
+        <param name="deadzone" value="0.1"/>
+        <param name="autorepeat_rate" value="20.0"/>
+    </node>
+
+    <!-- UR5e Inverse Kinematics Node -->
+    <node name="ur5e_inverse_kinematics" pkg="ur5e_joystick_control" type="ur5e_inverse_kinematics.py" output="screen">
+    </node>
+</launch>
+
