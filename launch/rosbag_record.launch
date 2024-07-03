@@ -1,0 +1,9 @@
+<launch>
+    <!-- ROS bag record node -->
+    <node name="record"
+          pkg="rosbag"
+          type="record"
+          args="-o /path/to/save/your/rosbag.bag /camera/aligned_depth_to_color/camera_info /camera/aligned_depth_to_color/image_raw /camera/color/camera_info /camera/color/image_raw /camera/confidence/camera_info /camera/confidence/image_rect_raw /joint_states /tf"
+          output="screen">
+    </node>
+</launch>
