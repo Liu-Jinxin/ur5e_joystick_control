@@ -1,0 +1,16 @@
+<launch>
+    <!-- Declare the path to the bag file as an argument with a default value -->
+    <arg name="bag_file_path" default="/workspace/Ros1_bag"/>
+    
+    <!-- Node to play the ROS bag -->
+    <!-- <node name="play_bag" pkg="rosbag" type="play" args="$(arg bag_file_path)" output="screen"/> -->
+    
+    <!-- Node to run the generate_database script -->
+    <node name="generate_database_node" pkg="ur5e_joystick_control" type="generate_database.py" output="screen">
+        <param name="image_topic" value="camera/color/image_raw"/>
+        <param name="depth_topic" value="camera/aligned_depth_to_color/image_raw"/>
+        <param name="confi_topic" value="camera/confidence/image_rect_raw"/>
+        <param name="joint_topic" value="joint_states"/>
+        <param name="result_path" value="/workspace/Ros1_bag/results/results"/>
+    </node>
+</launch>
