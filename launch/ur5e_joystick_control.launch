@@ -10,4 +10,3 @@
     <node name="ur5e_inverse_kinematics" pkg="ur5e_joystick_control" type="ur5e_inverse_kinematics.py" output="screen">
     </node>
 </launch>
-
