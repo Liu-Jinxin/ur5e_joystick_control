@@ -69,9 +69,14 @@ class ImageSaver:
         self.depth_topic = rospy.get_param('~depth_topic', 'camera/aligned_depth_to_color/image_raw')
         self.confi_topic = rospy.get_param('~confi_topic', 'camera/confidence/image_rect_raw')
         self.joint_topic = rospy.get_param('~joint_topic', 'joint_states')
-        self.result_path = rospy.get_param('~result_path', '/workspace/Ros1_bag/L515_2024-07-03-21-09-35_results')
-        self.traj_file_path = os.path.join(os.path.dirname(self.result_path), 'traj.txt')
-        os.makedirs(self.result_path, exist_ok=True)
+        self.result_path = rospy.get_param('~result_path', '/workspace/Ros1_bag/L515_2024-07-04-14-48-05_results')
+        self.frame_path = os.path.join(self.result_path, "frame")
+        self.depth_path = os.path.join(self.result_path, "depth")
+        self.confi_path = os.path.join(self.result_path, "confi")
+        self.traj_file_path = os.path.join(self.result_path, "traj.txt")
+        os.makedirs(self.frame_path, exist_ok=True)
+        os.makedirs(self.depth_path, exist_ok=True)
+        os.makedirs(self.confi_path, exist_ok=True)
         self.traj_file = open(self.traj_file_path, "a")
 
         self.bridge = CvBridge()
@@ -98,27 +103,35 @@ class ImageSaver:
             self.traj_file.close()
 
     def callback(self, color_msg, depth_msg, confi_msg, joint_msg):
-        rospy.loginfo("Received images and joint states")
-        joint_angles = self.get_joint_angles(joint_msg)
-        base_to_wrist_transform = forward_kinematics(joint_angles)
-        wrist_to_camera_transform = static_transform_wrist_to_camera()
-        base_to_camera_transform = np.dot(base_to_wrist_transform, wrist_to_camera_transform)
-        flat_transform = base_to_camera_transform.flatten()
-        rospy.loginfo('Writing this matrix to traj.txt: {}'.format(flat_transform))
-        np.savetxt(self.traj_file, [flat_transform], fmt='%.18e')
-        cv_color_image = self.bridge.imgmsg_to_cv2(color_msg, desired_encoding='bgr8')
-        frame_filename = os.path.join(self.result_path, 'frame{:06d}.jpg'.format(self.frame_number))
-        cv2.imwrite(frame_filename, cv_color_image)
-        rospy.loginfo("Saved color image to {}".format(frame_filename))
-        cv_depth_image = self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding="passthrough")
-        depth_filename = os.path.join(self.result_path, 'depth{:06d}.png'.format(self.frame_number))
-        cv2.imwrite(depth_filename, cv_depth_image)
-        rospy.loginfo("Saved depth image to {}".format(depth_filename))
-        cv_confi_image = self.bridge.imgmsg_to_cv2(confi_msg, desired_encoding="passthrough")
-        confi_filename = os.path.join(self.result_path, 'confi{:06d}.png'.format(self.frame_number))
-        cv2.imwrite(confi_filename, cv_confi_image)
-        rospy.loginfo("Saved confi image to {}".format(confi_filename))
-        self.frame_number += 1
+        # Callback for processing synchronized messages
+        try:
+            # Compute the transformation matrices
+            joint_angles = self.get_joint_angles(joint_msg)
+            base_to_wrist_transform = forward_kinematics(joint_angles)
+            wrist_to_camera_transform = static_transform_wrist_to_camera()
+            base_to_camera_transform = np.dot(base_to_wrist_transform, wrist_to_camera_transform)
+            flat_transform = base_to_camera_transform.flatten()
+
+            # Save transformation matrix
+            np.savetxt(self.traj_file, [flat_transform], fmt='%.18e')
+            self.traj_file.flush()  # Ensure data is written to disk
+
+            # Process and save images
+            cv_color_image = self.bridge.imgmsg_to_cv2(color_msg, desired_encoding='bgr8')
+            frame_filename = os.path.join(self.frame_path, f'frame{self.frame_number:06d}.jpg')
+            cv2.imwrite(frame_filename, cv_color_image)
+
+            cv_depth_image = self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding="passthrough")
+            depth_filename = os.path.join(self.depth_path, f'depth{self.frame_number:06d}.png')
+            cv2.imwrite(depth_filename, cv_depth_image)
+
+            cv_confi_image = self.bridge.imgmsg_to_cv2(confi_msg, desired_encoding="passthrough")
+            confi_filename = os.path.join(self.confi_path, f'confi{self.frame_number:06d}.png')
+            cv2.imwrite(confi_filename, cv_confi_image)
+
+            self.frame_number += 1  # Increment frame counter only after successful operations
+        except Exception as e:
+            rospy.logerr(f"Error processing or saving data: {str(e)}")
 
     def get_joint_angles(self, joint_msg):
         index_map = {name: idx for idx, name in enumerate(joint_msg.name)}

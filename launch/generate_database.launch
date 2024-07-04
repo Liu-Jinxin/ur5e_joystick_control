@@ -1,6 +1,10 @@
 <launch>
-    <!-- Declare the path to the bag file as an argument with a default value -->
-    <arg name="bag_file_path" default="/workspace/Ros1_bag/L515_2024-07-03-21-09-35.bag"/>
+    <!-- Declare the base file name as an argument -->
+    <arg name="base_file_name" default="L515_2024-07-04-15-10-36"/>
+    
+    <!-- Construct the full bag file path and results directory -->
+    <arg name="bag_file_path" default="/workspace/Ros1_bag/$(arg base_file_name).bag"/>
+    <arg name="result_path" default="/workspace/Ros1_bag/$(arg base_file_name)_results"/>
     
     <!-- Node to play the ROS bag -->
     <node name="play_bag" pkg="rosbag" type="play" args="$(arg bag_file_path)"/>
@@ -11,6 +15,6 @@
         <param name="depth_topic" value="camera/aligned_depth_to_color/image_raw"/>
         <param name="confi_topic" value="camera/confidence/image_rect_raw"/>
         <param name="joint_topic" value="joint_states"/>
-        <param name="result_path" value="/workspace/Ros1_bag/L515_2024-07-03-21-09-35_results"/>
+        <param name="result_path" value="$(arg result_path)"/>
     </node>
 </launch>
