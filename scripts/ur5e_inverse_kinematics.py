@@ -9,6 +9,8 @@ class UR5eInverseKinematics:
     def __init__(self):
         rospy.init_node('ur5e_inverse_kinematics', anonymous=True)
 
+        self.alpha = 0.1
+        self.previous_velocities = np.zeros(6)
         # self.gripper = RobotiqHand()
         # self.gripper.connect("192.168.0.121", 54321)
         # self.gripper.reset()
@@ -60,10 +62,12 @@ class UR5eInverseKinematics:
             self.gripper.move(self.gripper_position, 0, 100)
 
         # Base to end-effector velocity transformation
-        eef_base_velocity = np.array([0.05 * x_velocity, 0.05 * y_velocity, 0.05 * z_velocity, 0.05 * roll_velocity, 0.05 * pitch_velocity, 0.05 * yaw_velocity])
+        eef_base_velocity = np.array([0.05 * x_velocity, 0.05 * y_velocity, 0.05 * z_velocity, 0.5 * roll_velocity, 0.5 * pitch_velocity, 0.5 * yaw_velocity])
         rospy.loginfo('End-effector velocity: {}'.format(eef_base_velocity))
         joint_velocities = self.inverse_kinematics(self.joint_angles, eef_base_velocity)
-        self.publish_joint_velocities(joint_velocities)
+        filtered_velocities = self.alpha * joint_velocities + (1 - self.alpha) * self.previous_velocities
+        self.publish_joint_velocities(filtered_velocities)
+        self.previous_velocities = filtered_velocities
 
     def compute_jacobian(self, theta):
         J = np.zeros((6, 6))  # Jacobian matrix

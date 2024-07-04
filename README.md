@@ -7,7 +7,7 @@
 ```bash
 catkin_make
 source devel/setup.bash
-roslaunch ur_robot_driver ur5e_bringup.launch robot_ip:=192.168.56.102 kinematics_config:=${HOME}/catkin_ws/src/universal_robot/ur5_e_moveit_config/config/ur5e.srdf
+roslaunch ur_robot_driver ur5e_bringup.launch robot_ip:=192.168.1.102
 ```
 
 4. Run the UR control panel to control the robot:
@@ -32,4 +32,9 @@ roslaunch ur5e_joystick_control ur5e_joystick_control.launch
 7. Generate database:
 ```bash
 roslaunch ur5e_joystick_control generate_database.launch
+```
+
+8. Copy data:
+```bash
+cp -r /home/jinxin/ur_ws/rosbag /media/jinxin/Data_ubuntu
 ```
