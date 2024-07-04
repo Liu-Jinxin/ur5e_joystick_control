@@ -69,7 +69,7 @@ class ImageSaver:
         self.depth_topic = rospy.get_param('~depth_topic', 'camera/aligned_depth_to_color/image_raw')
         self.confi_topic = rospy.get_param('~confi_topic', 'camera/confidence/image_rect_raw')
         self.joint_topic = rospy.get_param('~joint_topic', 'joint_states')
-        self.result_path = rospy.get_param('~result_path', '/workspace/Ros1_bag/results')
+        self.result_path = rospy.get_param('~result_path', '/workspace/Ros1_bag/L515_2024-07-03-21-09-35_results')
         self.traj_file_path = os.path.join(os.path.dirname(self.result_path), 'traj.txt')
         os.makedirs(self.result_path, exist_ok=True)
         self.traj_file = open(self.traj_file_path, "a")
@@ -89,7 +89,7 @@ class ImageSaver:
         depth_sub = Subscriber(self.depth_topic, Image)
         confi_sub = Subscriber(self.confi_topic, Image)
         joint_sub = Subscriber(self.joint_topic, JointState)
-        self.ts = ApproximateTimeSynchronizer([color_sub, depth_sub, confi_sub, joint_sub], 20, 0.001)
+        self.ts = ApproximateTimeSynchronizer([color_sub, depth_sub, confi_sub, joint_sub], 30, 0.002)
         self.ts.registerCallback(self.callback)
         
 
@@ -114,6 +114,10 @@ class ImageSaver:
         depth_filename = os.path.join(self.result_path, 'depth{:06d}.png'.format(self.frame_number))
         cv2.imwrite(depth_filename, cv_depth_image)
         rospy.loginfo("Saved depth image to {}".format(depth_filename))
+        cv_confi_image = self.bridge.imgmsg_to_cv2(confi_msg, desired_encoding="passthrough")
+        confi_filename = os.path.join(self.result_path, 'confi{:06d}.png'.format(self.frame_number))
+        cv2.imwrite(confi_filename, cv_confi_image)
+        rospy.loginfo("Saved confi image to {}".format(confi_filename))
         self.frame_number += 1
 
     def get_joint_angles(self, joint_msg):
