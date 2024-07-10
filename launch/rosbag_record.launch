@@ -3,7 +3,7 @@
     <node name="record"
           pkg="rosbag"
           type="record"
-          args="-o rosbag/L515.bag /camera/aligned_depth_to_color/camera_info /camera/aligned_depth_to_color/image_raw /camera/color/camera_info /camera/color/image_raw /camera/confidence/camera_info /camera/confidence/image_rect_raw /joint_states /tf"
+          args="-o rosbag/L515.bag /camera/aligned_depth_to_color/camera_info /camera/aligned_depth_to_color/image_raw /camera/color/camera_info /camera/color/image_raw /camera/confidence/camera_info /camera/confidence/image_rect_raw /joint_states /tf /tf_static"
           output="screen">
     </node>
 </launch>
