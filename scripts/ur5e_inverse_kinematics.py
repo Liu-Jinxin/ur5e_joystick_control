@@ -11,12 +11,12 @@ class UR5eInverseKinematics:
 
         self.alpha = 0.1
         self.previous_velocities = np.zeros(6)
-        # self.gripper = RobotiqHand()
-        # self.gripper.connect("192.168.0.121", 54321)
-        # self.gripper.reset()
-        # self.gripper.activate()
-        # self.gripper.wait_activate_complete()
-        # self.gripper_position = 0
+        self.gripper = RobotiqHand()
+        self.gripper.connect("192.168.1.110", 54321)
+        self.gripper.reset()
+        self.gripper.activate()
+        self.gripper.wait_activate_complete()
+        self.gripper_position = 0
 
         self.dh_d = [0.1625, 0, 0, 0.1333, 0.0997, 0.0996]
         self.dh_a = [0, -0.425, -0.3922, 0, 0, 0]
